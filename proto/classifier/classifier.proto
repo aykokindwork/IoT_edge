@@ -1,0 +1,22 @@
+
+syntax = "proto3";
+
+package classifier;
+
+option go_package = "proto/classifier/";
+
+// Запрос к ML модели — вектор признаков одного flow
+message ClassifyRequest {
+repeated float features = 1;  // float64[10]
+string flow_id = 2;            // src_ip:src_port->dst_ip:dst_port
+}
+
+// Ответ от ML модели
+message ClassifyResponse {
+float probability = 1;   // вероятность атаки 0.0 - 1.0
+string verdict = 2;      // "benign", "suspicious", "attack"
+}
+
+service ClassifierService {
+rpc Classify(ClassifyRequest) returns (ClassifyResponse);
+}

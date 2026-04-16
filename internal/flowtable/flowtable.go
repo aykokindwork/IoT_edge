@@ -1,6 +1,7 @@
 package flowtable
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -24,7 +25,6 @@ type FlowStats struct {
 	// Онлайн статистика размеров пакетов
 	MinSize int64
 	MaxSize int64
-	SumSize int64 // AVG = SumSize / PacketCount
 
 	// Онлайн статистика IAT
 	LastPacketTime time.Time
@@ -63,7 +63,6 @@ func (ft *FlowTable) Update(key FlowKey, pktSize int64, pktTime time.Time) {
 			TotalSize:      pktSize,
 			MinSize:        pktSize,
 			MaxSize:        pktSize,
-			SumSize:        pktSize,
 			LastPacketTime: pktTime,
 			MinIAT:         0,
 			MaxIAT:         0,
@@ -76,7 +75,6 @@ func (ft *FlowTable) Update(key FlowKey, pktSize int64, pktTime time.Time) {
 	stats.LastSeen = pktTime
 	stats.PacketCount++
 	stats.TotalSize += pktSize
-	stats.SumSize += pktSize
 
 	if pktSize < stats.MinSize {
 		stats.MinSize = pktSize
@@ -88,8 +86,8 @@ func (ft *FlowTable) Update(key FlowKey, pktSize int64, pktTime time.Time) {
 
 	iat := pktTime.Sub(stats.LastPacketTime).Seconds()
 	stats.LastPacketTime = pktTime
-	stats.SumIAT += iat
 	stats.IATCount++
+	stats.SumIAT += iat
 
 	if stats.IATCount == 1 {
 		stats.MinIAT = iat
@@ -103,4 +101,61 @@ func (ft *FlowTable) Update(key FlowKey, pktSize int64, pktTime time.Time) {
 		}
 	}
 
+}
+
+func buildVector(key FlowKey, stats *FlowStats) []float64 {
+	duration := stats.LastSeen.Sub(stats.StartTime).Seconds()
+
+	avgSize := float64(0)
+	if stats.PacketCount > 0 {
+		avgSize = float64(stats.TotalSize) / float64(stats.PacketCount)
+	}
+
+	avgIAT := float64(0)
+	if stats.IATCount > 0 {
+		avgIAT = stats.SumIAT / float64(stats.IATCount)
+	}
+
+	return []float64{
+		duration,
+		float64(key.Proto),
+		duration,
+		float64(stats.TotalSize),
+		float64(stats.MinSize),
+		float64(stats.MaxSize),
+		avgSize,
+		float64(stats.TotalSize),
+		avgIAT,
+		float64(stats.PacketCount),
+	}
+}
+
+type ClassifyFunc func(key FlowKey, vector []float64)
+
+func (ft *FlowTable) StartCleanup(ctx context.Context, fn ClassifyFunc) {
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				ft.cleanup(fn)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+}
+
+func (ft *FlowTable) cleanup(fn ClassifyFunc) {
+	ft.mu.Lock()
+	defer ft.mu.Unlock()
+
+	now := time.Now()
+	for key, stats := range ft.flows {
+		if now.Sub(stats.LastSeen) > ft.timeout {
+			fn(key, buildVector(key, stats))
+			delete(ft.flows, key)
+		}
+	}
 }
