@@ -24,11 +24,12 @@ type Producer struct {
 // New создает нового продюсера и запускает фоновый воркер
 func New(brokers []string, topic string) *Producer {
 	w := &kafka.Writer{
-		Addr:         kafka.TCP(brokers...),
-		Topic:        topic,
-		Balancer:     &kafka.LeastBytes{},
-		RequiredAcks: kafka.RequireNone, // Fire-and-forget на уровне Kafka
-		Async:        true,              // Внутренняя асинхронность библиотеки
+		Addr:                   kafka.TCP(brokers...),
+		Topic:                  topic,
+		Balancer:               &kafka.LeastBytes{},
+		RequiredAcks:           kafka.RequireNone, // Fire-and-forget на уровне Kafka
+		Async:                  true,              // Внутренняя асинхронность библиотеки
+		AllowAutoTopicCreation: true,
 	}
 
 	p := &Producer{

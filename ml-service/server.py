@@ -1,20 +1,18 @@
 import grpc
-import pickle
+import joblib
 import numpy as np
 from concurrent import futures
 import classifier_pb2
 import classifier_pb2_grpc
+import warnings
 
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # Загружаем модель и метаданные
-with open('models/ciciot_ml_model.pkl', 'rb') as f:
-    model = pickle.load(f)
+model = joblib.load('models/ciciot_ml_model.pkl')
+feature_names = joblib.load('models/ciciot_features.pkl')
+thresholds = joblib.load('models/ciciot_thresholds.pkl')
 
-with open('models/ciciot_features.pkl', 'rb') as f:
-    feature_names = pickle.load(f)
-
-with open('models/ciciot_thresholds.pkl', 'rb') as f:
-    thresholds = pickle.load(f)
 
 LOW_T  = thresholds['LOW_T']   # 0.35
 HIGH_T = thresholds['HIGH_T']  # 0.75
