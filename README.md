@@ -37,16 +37,16 @@
 
 
 # Сборка и запуск всей инфраструктуры в фоне
-    docker-compose up -d --build
+    make up
 
 # Просмотр решений шлюза
-    docker-compose logs -f gateway
+    make gateway-logs
 
 # Просмотр работы ML-модели
-    docker-compose logs -f ml-service
+    make ml-service-logs
 
 # Проверка данных в KafkaL:
-    docker-compose exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic suspicious-flows --from-beginning
+    make kafka-messages
 
 # Контракт признаков (Features)
 Для анализа каждого сетевого потока (flow) извлекается вектор из 10 ключевых признаков, определенных на основе датасета CICIoT2023. Эти признаки позволяют эффективно обнаруживать аномалии при минимальных затратах ресурсов Edge-устройства:
