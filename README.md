@@ -43,18 +43,17 @@ code Bash
 docker-compose up -d --build
 
 Мониторинг логов
-code Bash
-
+gateway:
 # Просмотр решений шлюза
-docker-compose logs -f gateway
+    docker-compose logs -f gateway
 
+ml-model:
 # Просмотр работы ML-модели
-docker-compose logs -f ml-service
+    docker-compose logs -f ml-service
 
-Проверка данных в Kafka
-code Bash
+Проверка данных в KafkaL:
 
-docker-compose exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic suspicious-flows --from-beginning
+    docker-compose exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic suspicious-flows --from-beginning
 
 Контракт признаков (Features)
 
