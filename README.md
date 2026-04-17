@@ -1,4 +1,4 @@
-IoT Edge Intrusion Detection System (IDS) Gateway
+# IoT Edge Intrusion Detection System (IDS) Gateway
 
 Прототип интеллектуального граничного шлюза для защиты сетей IoT на основе анализа сетевых потоков (flows) в реальном времени.
 Архитектура системы
@@ -29,14 +29,12 @@ IoT Edge Intrusion Detection System (IDS) Gateway
 
     Asynchronous Buffering: Неблокирующая отправка данных в Kafka для защиты основного процесса обработки трафика.
 
-Как запустить
 Требования
 
     Docker и Docker Compose
 
     (Для Windows) Установленный Npcap для работы сетевого интерфейса в режиме host.
 
-Запуск
 
 # Сборка и запуск всей инфраструктуры в фоне
     docker-compose up -d --build
