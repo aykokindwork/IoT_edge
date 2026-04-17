@@ -5,6 +5,7 @@ from concurrent import futures
 import classifier_pb2
 import classifier_pb2_grpc
 import warnings
+import os
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -14,11 +15,11 @@ feature_names = joblib.load('models/ciciot_features.pkl')
 thresholds = joblib.load('models/ciciot_thresholds.pkl')
 
 
-LOW_T  = thresholds['LOW_T']   # 0.35
-HIGH_T = thresholds['HIGH_T']  # 0.75
+LOW_T = float(os.getenv('LOW_THRESHOLD', thresholds['LOW_T']))
+HIGH_T = float(os.getenv('HIGH_THRESHOLD', thresholds['HIGH_T']))
 
 print(f"Model loaded. Features: {feature_names}")
-print(f"Thresholds: LOW={LOW_T}, HIGH={HIGH_T}")
+print(f"ACTIVE THRESHOLDS: LOW={LOW_T}, HIGH={HIGH_T}") # Чтобы видеть в логах, что подцепилось
 
 
 class ClassifierServicer(classifier_pb2_grpc.ClassifierServiceServicer):
