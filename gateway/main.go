@@ -30,7 +30,7 @@ func main() {
 	}
 	defer cls.Close()
 
-	prod := producer.New([]string{"localhost:9092"}, "suspicious-flows")
+	prod := producer.New([]string{"192.168.1.10:9092"}, "suspicious-flows")
 	prod.StartWorker(ctx)
 
 	// 3. Инициализация логики
