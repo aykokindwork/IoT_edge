@@ -15,7 +15,7 @@ import (
 	"edge-gateway/internal/producer"
 )
 
-var topic = "suspicious-flow"
+var topic = "suspicious-flows"
 
 func main() {
 	// 1. Управление завершением
@@ -24,24 +24,19 @@ func main() {
 
 	log.Println("--- IoT Edge Gateway starting ---")
 
-	classifierAddr := os.Getenv("CLASSIFIER_ADDRESS")
-	if classifierAddr == "" {
-		classifierAddr = "localhost:50051"
-	}
-
-	cls, err := classifier.New(classifierAddr)
+	cls, err := classifier.New("localhost:50051")
 	if err != nil {
 		log.Fatalf("Failed to init classifier: %v", err)
 	}
 	defer cls.Close()
 
-	kafkaAddr := os.Getenv("KAFKA_ADDRESS")
+	kafkaAddr := os.Getenv("KAFKA_BROKERS")
 	if kafkaAddr == "" {
-		kafkaAddr = "192.168.1.5:9092"
+		panic("Check the kafka_address in .env")
 	}
 
 	prod := producer.New([]string{kafkaAddr}, topic)
-	prod.StartWorker(ctx)
+	prod.StartWorker()
 
 	// 3. Инициализация логики
 	engine := decision.NewEngine(cls, prod)
@@ -54,8 +49,9 @@ func main() {
 	// "eth0" — это пример для Linux.
 	// Если ты на Windows, тебе нужно узнать имя своего интерфейса.
 	// Для теста можно попробовать "\\Device\\NPF_..." или просто пропустить этот этап,
-	// если будешь запускать сразу в Docker (там почти всегда eth0).
-	cap, err := capture.NewCapturer("eth0", ft)
+	// если будешь запускать сразу в Docker (там почти всегда eth0)
+	pathPCAPFile := os.Getenv("PCAP_FILE_PATH")
+	cap, err := capture.NewCapturer("eth0", ft, pathPCAPFile)
 	if err != nil {
 		log.Printf("WARNING: Failed to init capturer: %v. Running without live capture.", err)
 	} else {
@@ -69,7 +65,7 @@ func main() {
 
 	log.Println("--- Shutting down gracefully... ---")
 
-	// Важный момент: даем время воркерам дочитать данные из каналов
-	time.Sleep(2 * time.Second)
-	log.Println("Gateway stopped.")
+	prod.Close()
+
+	log.Println("Gateway stopped cleanly.")
 }
