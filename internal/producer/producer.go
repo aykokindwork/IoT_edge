@@ -86,9 +86,8 @@ func (p *Producer) Push(flowID string, vector []float64) {
 
 	select {
 	case p.msgChan <- msg:
-		p.msgChan <- msg
 
 	default:
-		log.Println("kafka buffer full, dropping flow")
+		log.Printf("kafka buffer full, dropping flow %s", flowID)
 	}
 }

@@ -148,14 +148,23 @@ func (ft *FlowTable) StartCleanup(ctx context.Context, fn ClassifyFunc) {
 }
 
 func (ft *FlowTable) cleanup(fn ClassifyFunc) {
-	ft.mu.Lock()
-	defer ft.mu.Unlock()
-
 	now := time.Now()
+	// Временная структура для хранения данных вне лока
+	expired := make(map[FlowKey][]float64)
+
+	ft.mu.Lock()
 	for key, stats := range ft.flows {
 		if now.Sub(stats.LastSeen) > ft.timeout {
-			fn(key, buildVector(key, stats))
+			// Собираем векторы признаков для тех, кто "протух"
+			expired[key] = buildVector(key, stats)
+			// Удаляем из таблицы немедленно
 			delete(ft.flows, key)
 		}
+	}
+	ft.mu.Unlock() // ОТПУСКАЕМ ЗАМОК. Теперь захват пакетов не заблокирован.
+
+	// Теперь спокойно итерируемся по копии и делаем gRPC/Kafka вызовы
+	for key, vector := range expired {
+		fn(key, vector)
 	}
 }

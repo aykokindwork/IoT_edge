@@ -24,4 +24,4 @@ services:
       # Так как gateway в режиме host, для него "localhost" — это твой реальный комп.
       - CLASSIFIER_ADDR=localhost:50051
       # ip address kafka cloud
-      - KAFKA_BROKERS=192.168.10.1:9092
+      - KAFKA_BROKERS=${KAFKA_ADDRESS}

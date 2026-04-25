@@ -20,8 +20,5 @@ gateway-logs:
 ml-service-logs:
 	docker-compose logs ml-service
 
-kafka-messages:
-	docker-compose exec kafka kafka-console-consumer --bootstrap-server localhost:9092 --topic suspicious-flows --from-beginning
-
 ps:
 	docker-compose ps

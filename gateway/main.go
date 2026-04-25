@@ -15,6 +15,8 @@ import (
 	"edge-gateway/internal/producer"
 )
 
+var topic = "suspicious-flow"
+
 func main() {
 	// 1. Управление завершением
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -22,15 +24,23 @@ func main() {
 
 	log.Println("--- IoT Edge Gateway starting ---")
 
-	// 2. Инициализация внешних связей
-	// ВНИМАНИЕ: Если тестишь без докера, оставь localhost. В докере поменяем на имена сервисов.
-	cls, err := classifier.New("localhost:50051")
+	classifierAddr := os.Getenv("CLASSIFIER_ADDRESS")
+	if classifierAddr == "" {
+		classifierAddr = "localhost:50051"
+	}
+
+	cls, err := classifier.New(classifierAddr)
 	if err != nil {
 		log.Fatalf("Failed to init classifier: %v", err)
 	}
 	defer cls.Close()
 
-	prod := producer.New([]string{"192.168.1.10:9092"}, "suspicious-flows")
+	kafkaAddr := os.Getenv("KAFKA_ADDRESS")
+	if kafkaAddr == "" {
+		kafkaAddr = "192.168.1.5:9092"
+	}
+
+	prod := producer.New([]string{kafkaAddr}, topic)
 	prod.StartWorker(ctx)
 
 	// 3. Инициализация логики
