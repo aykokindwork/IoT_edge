@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"edge-gateway/internal/consumer"
 	"log"
 	"os"
 	"os/signal"
@@ -15,10 +16,15 @@ import (
 	"edge-gateway/internal/producer"
 )
 
-var topic = "suspicious-flows"
+const (
+	topicProducer = "suspicious-flows"
+	topicConsumer = "cloud_verdicts"
+	groupId       = "edge-gateway-group"
+)
 
 func main() {
 	// 1. Управление завершением
+	// TODO: убрать лишнюю логику с системными сигналами
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -35,7 +41,7 @@ func main() {
 		panic("Check the kafka_address in .env")
 	}
 
-	prod := producer.New([]string{kafkaAddr}, topic)
+	prod := producer.New([]string{kafkaAddr}, topicProducer)
 	prod.StartWorker()
 
 	// 3. Инициализация логики
@@ -57,6 +63,9 @@ func main() {
 	} else {
 		cap.Start(ctx)
 	}
+
+	cloudCons := consumer.New([]string{kafkaAddr}, topicConsumer, groupId)
+	cloudCons.Start(ctx, engine.ProccessCloudVerdict)
 
 	log.Println("Gateway is fully operational. Press Ctrl+C to stop.")
 
