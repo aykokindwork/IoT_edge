@@ -2,6 +2,7 @@ package decision
 
 import (
 	"context"
+	"edge-gateway/internal/consumer"
 	"fmt"
 	"log"
 
@@ -45,6 +46,15 @@ func (e *Engine) HandleResult(key flowtable.FlowKey, vector []float64) {
 		e.producer.Push(fmt.Sprintf("%s:%d", key.SrcIP, key.SrcPort), vector)
 	case "benign":
 		// Все хорошо, ничего не делаем
+	}
+}
+
+func (e *Engine) ProccessCloudVerdict(v consumer.CloudVerdict) {
+	if v.Verdict == "Benign" || v.Verdict == "BenignTraffic" {
+		log.Printf("Cloud verdict for %s: Clean.", v.IP)
+
+	} else {
+		log.Printf("!!! CLOUD VERDICT: IP %s is A ATTACKER. Blocking", v.IP)
 	}
 }
 
