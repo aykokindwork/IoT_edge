@@ -79,7 +79,7 @@ func (c *Capturer) Start(ctx context.Context) {
 					// Zero-copy чтение: мы получаем ссылку на байты прямо из буфера сетевой карты
 					data, ci, err = c.handle.ZeroCopyReadPacketData()
 				}
-				
+
 				if err != nil {
 					continue
 				}
@@ -113,9 +113,27 @@ func (c *Capturer) Start(ctx context.Context) {
 				}
 
 				// Если нашли IP и транспортный уровень (порты) — обновляем таблицу
+				headerLen := int64(0)
+				if ip4.Version > 0 {
+					headerLen += int64(ip4.IHL) * 4 // Длина IP заголовка
+				}
+
+				var tcpPtr *layers.TCP // Ссылка на TCP слой для извлечения флагов
+				if foundTransport {
+					for _, typ := range decoded {
+						if typ == layers.LayerTypeTCP {
+							headerLen += int64(tcp.DataOffset) * 4
+							tcpPtr = &tcp // Берем адрес нашей переменной tcp
+						} else if typ == layers.LayerTypeUDP {
+							headerLen += 8 // Фиксированный размер UDP заголовка
+						}
+					}
+				}
+
+				// 2. Теперь вызываем Update с правильным количеством аргументов
 				if key.SrcIP != "" && foundTransport {
-					// Используем время захвата пакета из pcap и его длину
-					c.flowTable.Update(key, int64(len(data)), ci.Timestamp)
+					// Передаем: ключ, общий размер, длину заголовков, время, и указатель на TCP
+					c.flowTable.Update(key, int64(len(data)), headerLen, ci.Timestamp, tcpPtr)
 				}
 
 			}

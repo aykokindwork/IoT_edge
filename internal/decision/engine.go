@@ -25,13 +25,14 @@ func NewEngine(c *classifier.Client, p *producer.Producer) *Engine {
 }
 
 // HandleResult — та самая функция-колбэк (ClassifyFunc)
-func (e *Engine) HandleResult(key flowtable.FlowKey, vector []float64) {
+func (e *Engine) HandleResult(key flowtable.FlowKey, v10 []float64, v46 []float64) {
 	ctx := context.Background()
+	id := fmt.Sprintf("%s:%d->%s:%d", key.SrcIP, key.SrcPort, key.DstIP, key.DstPort)
 
 	// 1. Спрашиваем локальную модель (Python через gRPC)
-	prob, verdict, err := e.classifier.Classify(ctx, fmt.Sprintf("%s:%d", key.SrcIP, key.SrcPort), vector)
+	prob, verdict, err := e.classifier.Classify(ctx, id, v10)
 	if err != nil {
-		log.Printf("Classification error: %v", err)
+		log.Printf("Local classification error for %s: %v", id, err)
 		return
 	}
 
@@ -40,12 +41,16 @@ func (e *Engine) HandleResult(key flowtable.FlowKey, vector []float64) {
 	// 2. Логика принятия решения
 	switch verdict {
 	case "attack":
+		// Локальная модель уверена — баним сразу
 		e.blockIP(key.SrcIP)
+
 	case "suspicious":
-		// Шлем ту самую функцию асинхронной отправки в Кафку
-		e.producer.Push(fmt.Sprintf("%s:%d", key.SrcIP, key.SrcPort), vector)
+		// Локальная модель сомневается — шлем ПОЛНЫЙ вектор (v46) в Облако
+		log.Printf("Flow from %s is suspicious. Sending 46 features to Cloud...", key.SrcIP)
+		e.producer.Push(id, v46)
+
 	case "benign":
-		// Все хорошо, ничего не делаем
+		// Всё чисто
 	}
 }
 

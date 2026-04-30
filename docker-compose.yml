@@ -2,6 +2,7 @@ services:
   ml-service:
     build:
       context: ./ml-service
+    network_mode: "host"
     ports:
       - "50051:50051"
     restart: always
@@ -20,6 +21,10 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./data:/app/data:ro
     environment:
