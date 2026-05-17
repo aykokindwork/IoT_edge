@@ -7,18 +7,18 @@ generate_rpc_python:
 generate: generate_rpc_go generate_rpc_python
 
 up:
-	docker-compose up -d --build
+	docker compose up -d --build
 
 down:
-	docker-compose down
+	docker compose down
 
 redeploy: down up
 
 gateway-logs:
-	docker-compose logs gateway
+	docker compose logs gateway
 
 ml-service-logs:
-	docker-compose logs ml-service
+	docker compose logs ml-service
 
 ps:
-	docker-compose ps
+	docker compose ps
