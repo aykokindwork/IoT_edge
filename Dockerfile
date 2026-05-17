@@ -9,12 +9,11 @@ WORKDIR /app
 ENV GOPROXY=https://proxy.golang.org,https://goproxy.cn,direct
 
 COPY go.mod go.sum ./
-RUN go mod download
 
 COPY . .
 
 # Собираем бинарник с именем 'gateway_app' в корень /app
-RUN CGO_ENABLED=1 GOOS=linux go build -o /app/gateway_app ./gateway/main.go
+RUN CGO_ENABLED=1 GOOS=linux go build -mod=vendor -o /app/gateway_app ./gateway/main.go
 
 # СТАДИЯ 2: Запуск
 FROM dockerhub.timeweb.cloud/library/debian:bullseye-slim
