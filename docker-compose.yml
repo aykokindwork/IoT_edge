@@ -1,1 +1,38 @@
-  
+services:
+  ml-service:
+    build:
+      context: ./ml-service
+    network_mode: "host"
+    ports:
+      - "50051:50051"
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LOW_THRESHOLD=0.40
+      - HIGH_THRESHOLD=0.80
+
+  gateway:
+    build:
+      context: .
+    depends_on:
+      - ml-service
+    # Мы используем host mode, чтобы Go видел сетевые пакеты твоего компа
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - ./data:/app/data:ro
+    environment:
+      # Так как gateway в режиме host, для него "localhost" — это твой реальный комп.
+      - CLASSIFIER_ADDR=localhost:50051
+      # ip address kafka cloud
+      - KAFKA_BROKERS=${KAFKA_ADDRESS}
+      - INTERFACE_NAME=${INTERFACE_NAME}
+      - PCAP_FILE_PATH=${PCAP_FILE_PATH}
+      - WHITE_LIST=${WHITE_LIST}
+
