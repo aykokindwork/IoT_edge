@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -57,7 +58,10 @@ func main() {
 	// Для теста можно попробовать "\\Device\\NPF_..." или просто пропустить этот этап,
 	// если будешь запускать сразу в Docker (там почти всегда eth0)
 	pathPCAPFile := os.Getenv("PCAP_FILE_PATH")
-	cap, err := capture.NewCapturer("eth0", ft, pathPCAPFile)
+	whiteList := strings.Split(os.Getenv("WHITE_LIST"), ",")
+	log.Println(whiteList)
+
+	cap, err := capture.NewCapturer("eth0", ft, pathPCAPFile, whiteList)
 	if err != nil {
 		log.Printf("WARNING: Failed to init capturer: %v. Running without live capture.", err)
 	} else {

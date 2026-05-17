@@ -2,6 +2,7 @@ services:
   ml-service:
     build:
       context: ./ml-service
+    network_mode: "host"
     ports:
       - "50051:50051"
     restart: always
@@ -20,6 +21,10 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     volumes:
       - ./data:/app/data:ro
     environment:
@@ -29,3 +34,5 @@ services:
       - KAFKA_BROKERS=${KAFKA_ADDRESS}
       - INTERFACE_NAME=${INTERFACE_NAME}
       - PCAP_FILE_PATH=${PCAP_FILE_PATH}
+      - WHITE_LIST=${WHITE_LIST}
+
