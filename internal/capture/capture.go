@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/netip"
+	"strings"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
@@ -13,12 +15,13 @@ import (
 )
 
 type Capturer struct {
-	handle    *pcap.Handle
-	flowTable *flowtable.FlowTable
-	isOffline bool
+	handle        *pcap.Handle
+	flowTable     *flowtable.FlowTable
+	isOffline     bool
+	ignoreNetwork []netip.Prefix
 }
 
-func NewCapturer(device string, ft *flowtable.FlowTable, pcapPath string) (*Capturer, error) {
+func NewCapturer(device string, ft *flowtable.FlowTable, pcapPath string, whiteList []string) (*Capturer, error) {
 
 	var isOffline bool
 	var handle *pcap.Handle
@@ -40,10 +43,28 @@ func NewCapturer(device string, ft *flowtable.FlowTable, pcapPath string) (*Capt
 	// Открываем сетевой интерфейс для захвата
 	// 65535 — размер буфера (snaplen), true — promiscuous mode (слушать всё)
 
+	var prefixes []netip.Prefix
+	for _, s := range whiteList {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+
+		p, err := netip.ParsePrefix(s)
+		if err != nil {
+			log.Printf("capturer warning: invalid network format: '%s': %v", s, err)
+			continue
+		}
+		prefixes = append(prefixes, p)
+	}
+
+	log.Printf("Capturer initialized. Ignoring %d networks: %v", len(prefixes), prefixes)
+
 	return &Capturer{
-		handle:    handle,
-		flowTable: ft,
-		isOffline: isOffline,
+		handle:        handle,
+		flowTable:     ft,
+		isOffline:     isOffline,
+		ignoreNetwork: prefixes,
 	}, nil
 
 }
@@ -80,10 +101,6 @@ func (c *Capturer) Start(ctx context.Context) {
 					data, ci, err = c.handle.ZeroCopyReadPacketData()
 				}
 
-				if err != nil {
-					continue
-				}
-
 				err = parser.DecodeLayers(data, &decoded)
 				if err != nil {
 					// Это может быть не IP пакет (например, ARP или IPv6, который мы не ждем) — просто игнорим
@@ -112,13 +129,29 @@ func (c *Capturer) Start(ctx context.Context) {
 					}
 				}
 
+				if key.SrcIP != "" {
+					srcAddr, _ := netip.ParseAddr(key.SrcIP)
+					dstAddr, _ := netip.ParseAddr(key.DstIP)
+
+					var shouldIgnore bool
+					for _, prefix := range c.ignoreNetwork {
+						if prefix.Contains(srcAddr) || prefix.Contains(dstAddr) {
+							shouldIgnore = true
+							break
+						}
+					}
+					if shouldIgnore {
+						continue
+					}
+				}
+
 				// Если нашли IP и транспортный уровень (порты) — обновляем таблицу
 				headerLen := int64(0)
 				if ip4.Version > 0 {
 					headerLen += int64(ip4.IHL) * 4 // Длина IP заголовка
 				}
 
-				var tcpPtr *layers.TCP // Ссылка на TCP слой для извлечения флагов
+				var tcpPtr *layers.TCP // Ссы	лка на TCP слой для извлечения флагов
 				if foundTransport {
 					for _, typ := range decoded {
 						if typ == layers.LayerTypeTCP {
